@@ -29,8 +29,23 @@
             <div><span>LIVE SIGNAL</span><h2>실시간 센서</h2></div>
             <span id="frameRate">0 Hz</span>
           </div>
-          <canvas id="signalCanvas" width="900" height="330" aria-label="센서 신호 그래프"></canvas>
-          <div class="legend"><span class="cyan">플렉스 평균</span><span class="orange">움직임 크기</span></div>
+          <div class="charts">
+            <section class="sensor-chart">
+              <div class="chart-title"><strong>손가락 굽힘</strong><span>ADC · 0–4095</span></div>
+              <canvas id="flexCanvas" width="900" height="230" aria-label="플렉스 센서 그래프"></canvas>
+              <div id="flexLegend" class="legend"></div>
+            </section>
+            <section class="sensor-chart">
+              <div class="chart-title"><strong>가속도</strong><span>mg · 자동 범위</span></div>
+              <canvas id="accCanvas" width="900" height="230" aria-label="가속도 센서 그래프"></canvas>
+              <div id="accLegend" class="legend"></div>
+            </section>
+            <section class="sensor-chart">
+              <div class="chart-title"><strong>각속도</strong><span>dps · 자동 범위</span></div>
+              <canvas id="gyroCanvas" width="900" height="230" aria-label="자이로 센서 그래프"></canvas>
+              <div id="gyroLegend" class="legend"></div>
+            </section>
+          </div>
         </div>
 
         <form id="captureForm" class="capture-card">

@@ -9,8 +9,11 @@ const countdown = document.querySelector("#countdown");
 const sampleCount = document.querySelector("#sampleCount");
 const badge = document.querySelector("#deviceBadge");
 const frameRate = document.querySelector("#frameRate");
-const canvas = document.querySelector("#signalCanvas");
-const ctx = canvas.getContext("2d");
+const chartGroups = [
+  { canvas: document.querySelector("#flexCanvas"), legend: document.querySelector("#flexLegend"), indexes: [0, 1, 2, 3, 4], labels: ["엄지", "검지", "중지", "약지", "소지"], colors: ["#69f5bd", "#5bd7ff", "#a98bff", "#ff7eb6", "#ffd166"], fixedRange: [0, 4095], digits: 0 },
+  { canvas: document.querySelector("#accCanvas"), legend: document.querySelector("#accLegend"), indexes: [5, 6, 7], labels: ["X", "Y", "Z"], colors: ["#5bd7ff", "#ffad66", "#ff6b6b"], digits: 1 },
+  { canvas: document.querySelector("#gyroCanvas"), legend: document.querySelector("#gyroLegend"), indexes: [8, 9, 10], labels: ["X", "Y", "Z"], colors: ["#5bd7ff", "#ffad66", "#ff6b6b"], digits: 1 }
+];
 
 let port;
 let reader;
@@ -135,34 +138,70 @@ form.addEventListener("submit", async event => {
 });
 
 function addGraphPoint(frame) {
-  const flex = frame.slice(0, 5).reduce((a, b) => a + b, 0) / 5 / 4095;
-  const motion = Math.min(1, Math.hypot(...frame.slice(8, 11)) / 300);
-  graph.push([flex, motion]);
+  graph.push(frame);
   if (graph.length > 120) graph.shift();
+  updateLegends(frame);
   drawGraph();
 }
 
+function updateLegends(frame) {
+  chartGroups.forEach(group => {
+    group.legend.innerHTML = group.indexes.map((frameIndex, index) =>
+      `<span><i style="background:${group.colors[index]}"></i>${group.labels[index]} <b>${frame[frameIndex].toFixed(group.digits)}</b></span>`
+    ).join("");
+  });
+}
+
 function drawGraph() {
-  const dpr = devicePixelRatio || 1;
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  if (canvas.width !== width * dpr) { canvas.width = width * dpr; canvas.height = height * dpr; }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, width, height);
-  [[0, "#5bd7ff"], [1, "#ffad66"]].forEach(([channel, color]) => {
-    ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2;
-    graph.forEach((point, index) => {
-      const x = index / 119 * width;
-      const y = height - point[channel] * (height - 24) - 12;
-      index ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  chartGroups.forEach(group => {
+    const { canvas } = group;
+    const ctx = canvas.getContext("2d");
+    const dpr = devicePixelRatio || 1;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const values = graph.flatMap(point => group.indexes.map(index => point[index]));
+    let min = group.fixedRange?.[0] ?? Math.min(...values, 0);
+    let max = group.fixedRange?.[1] ?? Math.max(...values, 1);
+    if (!group.fixedRange) {
+      const padding = Math.max((max - min) * 0.12, 1);
+      min -= padding;
+      max += padding;
+    }
+
+    group.indexes.forEach((frameIndex, channelIndex) => {
+      ctx.beginPath();
+      ctx.strokeStyle = group.colors[channelIndex];
+      ctx.lineWidth = 1.8;
+      graph.forEach((point, index) => {
+        const x = graph.length < 2 ? 0 : index / (graph.length - 1) * width;
+        const ratio = (point[frameIndex] - min) / Math.max(max - min, 1);
+        const y = height - Math.max(0, Math.min(1, ratio)) * (height - 20) - 10;
+        index ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.stroke();
     });
-    ctx.stroke();
+  });
+}
+
+function initializeLegends() {
+  chartGroups.forEach(group => {
+    group.legend.innerHTML = group.labels.map((label, index) =>
+      `<span><i style="background:${group.colors[index]}"></i>${label} <b>--</b></span>`
+    ).join("");
   });
 }
 
 setInterval(() => { frameRate.textContent = `${framesThisSecond} Hz`; framesThisSecond = 0; }, 1000);
 document.querySelector("#supportNotice").textContent = "serial" in navigator ? "Chrome · Edge · 115200 baud" : "Chrome 또는 Edge가 필요합니다.";
 loadLabels().catch(() => { message.textContent = "서버에서 수어 목록을 가져오지 못했습니다."; });
+initializeLegends();
 
 if (document.modelContext?.registerTool) {
   document.modelContext.registerTool({
