@@ -2,6 +2,7 @@ services:
   - type: web
     name: ai-hand-glove-collector
     runtime: python
+    plan: free
     rootDir: web
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
