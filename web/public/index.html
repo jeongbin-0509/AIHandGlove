@@ -59,6 +59,11 @@
             <div><strong id="sampleCount">0</strong><span>저장된 샘플</span></div>
           </div>
           <button id="recordButton" class="record" type="submit" disabled><span></span> 2초 동작 기록</button>
+          <div id="reviewActions" class="review-actions" hidden>
+            <div><strong>방금 수집한 데이터</strong><span>40프레임 수집 완료 · DB에 추가할까요?</span></div>
+            <button id="discardButton" class="discard" type="button">버리기</button>
+            <button id="saveButton" class="save" type="button">DB에 저장</button>
+          </div>
           <p id="message" class="message">먼저 USB 장갑을 연결해 주세요.</p>
         </form>
       </section>

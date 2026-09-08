@@ -9,6 +9,9 @@ const countdown = document.querySelector("#countdown");
 const sampleCount = document.querySelector("#sampleCount");
 const badge = document.querySelector("#deviceBadge");
 const frameRate = document.querySelector("#frameRate");
+const reviewActions = document.querySelector("#reviewActions");
+const saveButton = document.querySelector("#saveButton");
+const discardButton = document.querySelector("#discardButton");
 const chartGroups = [
   { canvas: document.querySelector("#flexCanvas"), legend: document.querySelector("#flexLegend"), indexes: [0, 1, 2, 3, 4], labels: ["엄지", "검지", "중지", "약지", "소지"], colors: ["#69f5bd", "#5bd7ff", "#a98bff", "#ff7eb6", "#ffd166"], fixedRange: [0, 4095], digits: 0 },
   { canvas: document.querySelector("#accCanvas"), legend: document.querySelector("#accLegend"), indexes: [5, 6, 7], labels: ["X", "Y", "Z"], colors: ["#5bd7ff", "#ffad66", "#ff6b6b"], digits: 1 },
@@ -20,6 +23,7 @@ let reader;
 let connected = false;
 let recording = false;
 let capture = [];
+let pendingSample = null;
 let saved = 0;
 let framesThisSecond = 0;
 const graph = [];
@@ -99,7 +103,7 @@ connectButton.addEventListener("click", async () => {
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
-  if (!connected || recording) return;
+  if (!connected || recording || pendingSample) return;
   recordButton.disabled = true;
   for (let number = 3; number > 0; number -= 1) {
     countdown.textContent = number;
@@ -110,32 +114,68 @@ form.addEventListener("submit", async event => {
   recording = true;
   while (capture.length < 40 && connected) await new Promise(resolve => setTimeout(resolve, 20));
   recording = false;
+  if (capture.length !== 40) {
+    countdown.textContent = "중단됨";
+    recordButton.disabled = !connected;
+    message.textContent = "40프레임을 채우지 못했습니다. 연결을 확인하고 다시 기록해 주세요.";
+    return;
+  }
+
+  pendingSample = {
+    participantId: participantId.value,
+    sessionId,
+    label: labelSelect.value,
+    featureNames: FEATURES,
+    sequence: capture.map(frame => [...frame]),
+    firmwareVersion: "0.1.0"
+  };
+  countdown.textContent = "확인";
+  reviewActions.hidden = false;
+  message.textContent = `${pendingSample.label} 데이터 40프레임을 수집했습니다. 저장하거나 버리기를 선택하세요.`;
+});
+
+saveButton.addEventListener("click", async () => {
+  if (!pendingSample) return;
+  saveButton.disabled = true;
+  discardButton.disabled = true;
   countdown.textContent = "저장 중";
 
   try {
     const response = await fetch("/api/samples", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        participantId: participantId.value,
-        sessionId,
-        label: labelSelect.value,
-        featureNames: FEATURES,
-        sequence: capture,
-        firmwareVersion: "0.1.0"
-      })
+      body: JSON.stringify(pendingSample)
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error);
     saved += 1;
     sampleCount.textContent = saved;
     countdown.textContent = "완료";
-    message.textContent = `${labelSelect.value} 샘플이 저장됐습니다. 잠시 쉬고 다시 반복하세요.`;
+    message.textContent = `${pendingSample.label} 샘플을 DB에 저장했습니다. 잠시 쉬고 다시 반복하세요.`;
+    clearPendingSample();
   } catch (error) {
     countdown.textContent = "실패";
-    message.textContent = error.message;
-  } finally { recordButton.disabled = !connected; }
+    message.textContent = `저장하지 못했습니다: ${error.message}`;
+    saveButton.disabled = false;
+    discardButton.disabled = false;
+  }
 });
+
+discardButton.addEventListener("click", () => {
+  if (!pendingSample) return;
+  clearPendingSample();
+  countdown.textContent = "준비";
+  message.textContent = "방금 수집한 데이터는 DB에 저장하지 않고 버렸습니다. 다시 기록할 수 있습니다.";
+});
+
+function clearPendingSample() {
+  pendingSample = null;
+  capture = [];
+  reviewActions.hidden = true;
+  saveButton.disabled = false;
+  discardButton.disabled = false;
+  recordButton.disabled = !connected;
+}
 
 function addGraphPoint(frame) {
   graph.push(frame);
