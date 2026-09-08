@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AI 수어 인식 장갑 센서 데이터 수집기" />
+    <title>AIHandGlove 데이터 수집</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand-mark">AG</div>
+        <div><strong>AIHandGlove</strong><span>수어 데이터 스튜디오</span></div>
+        <div id="deviceBadge" class="badge">장갑 연결 안 됨</div>
+      </header>
+
+      <section class="workspace">
+        <div class="intro">
+          <p class="eyebrow">STEP 01 · DEVICE</p>
+          <h1>장갑을 연결하고<br />동작을 기록하세요.</h1>
+          <p>한 번의 기록은 2초, 40개의 센서 프레임입니다. 같은 수어를 다양한 속도와 각도로 반복해 주세요.</p>
+          <button id="connectButton" class="primary">USB 장갑 연결</button>
+          <p id="supportNotice" class="notice"></p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-heading">
+            <div><span>LIVE SIGNAL</span><h2>실시간 센서</h2></div>
+            <span id="frameRate">0 Hz</span>
+          </div>
+          <canvas id="signalCanvas" width="900" height="330" aria-label="센서 신호 그래프"></canvas>
+          <div class="legend"><span class="cyan">플렉스 평균</span><span class="orange">움직임 크기</span></div>
+        </div>
+
+        <form id="captureForm" class="capture-card">
+          <p class="eyebrow">STEP 02 · CAPTURE</p>
+          <div class="field-row">
+            <label>수어 선택<select id="labelSelect" required></select></label>
+            <label>참가자 ID<input id="participantId" value="p001" pattern="[a-zA-Z0-9_-]{2,40}" required /></label>
+          </div>
+          <div class="capture-status">
+            <div id="countdown" class="countdown">준비</div>
+            <div><strong id="sampleCount">0</strong><span>저장된 샘플</span></div>
+          </div>
+          <button id="recordButton" class="record" type="submit" disabled><span></span> 2초 동작 기록</button>
+          <p id="message" class="message">먼저 USB 장갑을 연결해 주세요.</p>
+        </form>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

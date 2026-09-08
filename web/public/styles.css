@@ -1,0 +1,53 @@
+:root {
+  color-scheme: dark;
+  --bg: #07100f;
+  --panel: #0d1917;
+  --line: #243a35;
+  --text: #f0f8f5;
+  --muted: #94a9a2;
+  --mint: #69f5bd;
+  --cyan: #5bd7ff;
+  --orange: #ffad66;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at 15% 0%, #17352e 0, var(--bg) 34rem); color: var(--text); font: 16px/1.55 Inter, Pretendard, system-ui, sans-serif; }
+button, input, select { font: inherit; }
+.shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding-bottom: 64px; }
+.topbar { height: 82px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+.topbar div:nth-child(2) { display: flex; flex-direction: column; line-height: 1.25; }
+.topbar span { color: var(--muted); font-size: .82rem; }
+.brand-mark { display:grid; place-items:center; width:42px; height:42px; color:#06110e; background:var(--mint); border-radius:12px; font-weight:900; }
+.badge { margin-left:auto; padding:8px 13px; border:1px solid var(--line); border-radius:99px; color:var(--muted); font-size:.85rem; }
+.badge.connected { border-color:#348665; color:var(--mint); background:#10271f; }
+.workspace { display:grid; grid-template-columns: 1fr 1.3fr; gap:24px; padding-top:42px; }
+.intro { padding:26px 8% 28px 0; }
+.eyebrow { color:var(--mint); font-size:.78rem; font-weight:800; letter-spacing:.14em; }
+h1 { font-size:clamp(2.5rem,5vw,4.8rem); line-height:.98; letter-spacing:-.065em; margin:18px 0 24px; }
+.intro > p:not(.eyebrow) { color:var(--muted); max-width:520px; }
+.primary, .record { border:0; cursor:pointer; font-weight:800; border-radius:14px; }
+.primary { margin-top:20px; padding:15px 22px; background:var(--mint); color:#04100c; }
+.primary:hover { filter:brightness(1.08); }
+.notice,.message { color:var(--muted); font-size:.9rem; min-height:1.5em; }
+.panel,.capture-card { border:1px solid var(--line); background:linear-gradient(145deg,rgba(20,38,34,.92),rgba(10,20,18,.96)); border-radius:24px; box-shadow:0 24px 60px #0005; }
+.panel { overflow:hidden; }
+.panel-heading { display:flex; justify-content:space-between; align-items:center; padding:22px 24px; border-bottom:1px solid var(--line); }
+.panel-heading span { color:var(--muted); font-size:.74rem; letter-spacing:.12em; }
+.panel-heading h2 { margin:2px 0 0; font-size:1.15rem; }
+canvas { display:block; width:100%; height:270px; background:repeating-linear-gradient(0deg,transparent 0 44px,#ffffff0c 45px),repeating-linear-gradient(90deg,transparent 0 74px,#ffffff0c 75px); }
+.legend { display:flex; gap:20px; padding:14px 24px 20px; color:var(--muted); font-size:.82rem; }
+.legend span::before { content:""; display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; }
+.legend .cyan::before { background:var(--cyan); }.legend .orange::before { background:var(--orange); }
+.capture-card { grid-column:1/-1; padding:28px; display:grid; grid-template-columns:1.2fr .7fr auto; align-items:end; gap:24px; }
+.capture-card > .eyebrow { grid-column:1/-1; margin:0; }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+label { color:var(--muted); font-size:.84rem; font-weight:700; }
+select,input { width:100%; margin-top:7px; padding:12px; color:var(--text); background:#08110f; border:1px solid var(--line); border-radius:10px; }
+.capture-status { display:flex; align-items:center; gap:24px; }
+.capture-status > div { display:flex; flex-direction:column; }
+.capture-status strong,.countdown { font-size:2rem; line-height:1; }
+.capture-status span { color:var(--muted); font-size:.8rem; }
+.record { padding:15px 22px; background:#eafff7; color:#07100f; white-space:nowrap; }
+.record:disabled { opacity:.35; cursor:not-allowed; }
+.record span { display:inline-block; width:10px; height:10px; border-radius:50%; background:#ef4f54; }
+.message { grid-column:1/-1; margin:0; }
+@media (max-width:800px) { .workspace { grid-template-columns:1fr; }.intro { padding-right:0 }.capture-card { grid-template-columns:1fr }.field-row { grid-template-columns:1fr }.capture-card > * { grid-column:1!important } }
