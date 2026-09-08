@@ -1,9 +1,12 @@
 import os
 import re
+from collections import deque
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory
+from flask_socketio import SocketIO
 from supabase import Client, create_client
 
 
@@ -11,9 +14,11 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
 app = Flask(__name__, static_folder="public", static_url_path="")
+socketio = SocketIO(app, cors_allowed_origins=[], async_mode="threading")
 
 LABELS = ["안녕하세요", "감사합니다", "사랑해요", "미안합니다", "괜찮아요", "none"]
 PARTICIPANT_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{2,40}$")
+recent_predictions: deque[dict] = deque(maxlen=20)
 
 supabase: Client | None = None
 if os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
@@ -31,6 +36,34 @@ def health():
 @app.get("/api/labels")
 def get_labels():
     return jsonify(labels=LABELS)
+
+
+@app.get("/api/predictions/latest")
+def latest_prediction():
+    return jsonify(prediction=recent_predictions[-1] if recent_predictions else None)
+
+
+@app.post("/api/predictions")
+def publish_prediction():
+    expected_token = os.environ.get("JETSON_API_TOKEN", "")
+    supplied_token = request.headers.get("Authorization", "").removeprefix("Bearer ")
+    if not expected_token or supplied_token != expected_token:
+        return jsonify(error="인증에 실패했습니다."), 401
+
+    body = request.get_json(silent=True) or {}
+    label = body.get("label")
+    confidence = body.get("confidence")
+    if not isinstance(label, str) or not label.strip() or not isinstance(confidence, (int, float)):
+        return jsonify(error="추론 결과 형식이 올바르지 않습니다."), 400
+
+    prediction = {
+        "label": label.strip()[:80],
+        "confidence": max(0.0, min(1.0, float(confidence))),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    recent_predictions.append(prediction)
+    socketio.emit("prediction", prediction)
+    return jsonify(ok=True), 202
 
 
 @app.post("/api/samples")
@@ -107,6 +140,11 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.get("/demo")
+def demo():
+    return send_from_directory(app.static_folder, "demo.html")
+
+
 @app.get("/<path:path>")
 def static_or_index(path: str):
     requested = BASE_DIR / "public" / path
@@ -116,4 +154,4 @@ def static_or_index(path: str):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "3000")), debug=True)
+    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "3000")), debug=True)

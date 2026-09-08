@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AIHandGlove 실시간 수어 인식 시연" />
+    <title>AIHandGlove 실시간 시연</title>
+    <link rel="stylesheet" href="/demo.css" />
+  </head>
+  <body>
+    <main>
+      <header><a href="/">AG</a><div><strong>AIHandGlove</strong><span>실시간 수어 인식</span></div><span id="connection" class="status">서버 연결 중</span></header>
+      <section class="hero">
+        <p class="eyebrow">LIVE PREDICTION</p>
+        <div id="pulse" class="pulse"><span></span></div>
+        <h1 id="prediction">인식 대기 중</h1>
+        <div class="confidence"><div><span id="confidenceBar"></span></div><strong id="confidence">0%</strong></div>
+        <p id="receivedAt">Jetson Nano의 첫 추론 결과를 기다리고 있습니다.</p>
+        <button id="ttsToggle" class="tts active" type="button">🔊 자동 음성 켜짐</button>
+      </section>
+      <section class="history-card">
+        <div><p class="eyebrow">RECENT</p><h2>최근 인식 기록</h2></div>
+        <ol id="history"><li class="empty">아직 인식 결과가 없습니다.</li></ol>
+      </section>
+    </main>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="/demo.js"></script>
+  </body>
+</html>

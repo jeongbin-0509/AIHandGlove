@@ -56,6 +56,16 @@ python3 train.py --epochs 60 --device auto
 python3 main.py --model ../models/sign_transformer.pt --port /dev/ttyUSB0
 ```
 
+웹 시연 화면으로 결과를 보내려면 Jetson에 서버 주소와 Render의 `JETSON_API_TOKEN`을 설정합니다. 추론은 Jetson에서만 실행되며 서버는 라벨과 신뢰도만 웹소켓으로 브라우저에 전달합니다.
+
+```bash
+export GLOVE_API_URL=https://ai-hand-glove-collector.onrender.com
+export JETSON_API_TOKEN=YOUR_RENDER_TOKEN
+python3 main.py --model ../models/sign_transformer.pt --port /dev/ttyUSB0
+```
+
+시연 화면은 `https://ai-hand-glove-collector.onrender.com/demo`에서 열 수 있습니다. 새 결과가 도착하면 글자와 신뢰도가 갱신되고, 브라우저의 한국어 음성 합성 기능으로 자동 재생됩니다.
+
 ## 웹 데이터 수집기
 
 `web/`은 Flask 기반 Web Serial 수집 사이트이며 Render에서 실행할 수 있습니다. Supabase SQL Editor에서 `supabase/schema.sql`을 먼저 실행하고, Render 환경 변수 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JETSON_API_TOKEN`을 설정합니다. 웹에서 장갑을 사용할 때 ESP32의 출력 모드는 `OUTPUT_JSON`이어야 합니다.
