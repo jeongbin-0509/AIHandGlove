@@ -1,5 +1,7 @@
 import os
 import re
+import hashlib
+import secrets
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +21,7 @@ socketio = SocketIO(app, cors_allowed_origins=[], async_mode="threading")
 LABELS = ["안녕하세요", "감사합니다", "사랑해요", "미안합니다", "괜찮아요", "none"]
 PARTICIPANT_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{2,40}$")
 recent_predictions: deque[dict] = deque(maxlen=20)
+JETSON_TOKEN_SHA256 = "3aec97c7a25acaceefb3f9b5d7a6c1f75259a32cecc187a37cba77aaf45f619b"
 
 supabase: Client | None = None
 if os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
@@ -26,6 +29,15 @@ if os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_ROLE_KEY"
         os.environ["SUPABASE_URL"],
         os.environ["SUPABASE_SERVICE_ROLE_KEY"],
     )
+
+
+def jetson_is_authorized() -> bool:
+    supplied_token = request.headers.get("Authorization", "").removeprefix("Bearer ")
+    expected_token = os.environ.get("JETSON_API_TOKEN", "")
+    plain_match = bool(expected_token) and secrets.compare_digest(supplied_token, expected_token)
+    supplied_hash = hashlib.sha256(supplied_token.encode()).hexdigest()
+    hash_match = bool(supplied_token) and secrets.compare_digest(supplied_hash, JETSON_TOKEN_SHA256)
+    return plain_match or hash_match
 
 
 @app.get("/api/health")
@@ -66,9 +78,7 @@ def latest_prediction():
 
 @app.post("/api/predictions")
 def publish_prediction():
-    expected_token = os.environ.get("JETSON_API_TOKEN", "")
-    supplied_token = request.headers.get("Authorization", "").removeprefix("Bearer ")
-    if not expected_token or supplied_token != expected_token:
+    if not jetson_is_authorized():
         return jsonify(error="인증에 실패했습니다."), 401
 
     body = request.get_json(silent=True) or {}
@@ -136,9 +146,7 @@ def save_sample():
 def training_data():
     if supabase is None:
         return jsonify(error="Supabase 환경 변수가 설정되지 않았습니다."), 503
-    expected_token = os.environ.get("JETSON_API_TOKEN", "")
-    supplied_token = request.headers.get("Authorization", "").removeprefix("Bearer ")
-    if not expected_token or supplied_token != expected_token:
+    if not jetson_is_authorized():
         return jsonify(error="인증에 실패했습니다."), 401
 
     try:
