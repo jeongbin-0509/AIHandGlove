@@ -48,7 +48,7 @@ ttsToggle.addEventListener("click", () => {
 });
 
 const socket = io({ transports: ["websocket", "polling"] });
-socket.on("connect", () => { connection.textContent = "실시간 연결됨"; connection.classList.add("online"); });
+socket.on("connect", () => { connection.textContent = "게임 서버 연결됨"; connection.classList.add("online"); });
 socket.on("disconnect", () => { connection.textContent = "재연결 중"; connection.classList.remove("online"); });
 socket.on("prediction", result => showPrediction(result, true));
 

@@ -97,7 +97,7 @@ fetch("/api/sample-counts", { cache: "no-store" })
 
 const socket = io({ transports: ["websocket", "polling"] });
 socket.on("connect", () => {
-  connection.textContent = "Jetson 결과 수신 준비";
+  connection.textContent = "게임 서버 연결됨";
   connection.classList.add("online");
 });
 socket.on("disconnect", () => {
