@@ -56,6 +56,25 @@ python3 train.py --epochs 60 --device auto
 python3 main.py --model ../models/sign_transformer.pt --port /dev/ttyUSB0
 ```
 
+### MacBook에서 빠르게 학습
+
+Apple Silicon Mac에서는 `--device auto`가 Apple GPU(MPS)를 자동으로 선택합니다. Render에서 승인된 데이터를 내려받은 뒤 동일한 Transformer를 학습할 수 있으며, 생성된 `models/sign_transformer.pt`는 나중에 Jetson으로 복사해 사용할 수 있습니다.
+
+```bash
+cd jetson
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+export GLOVE_API_URL=https://ai-hand-glove-collector.onrender.com
+export JETSON_API_TOKEN=YOUR_RENDER_TOKEN
+python3 sync_data.py
+python3 train.py --epochs 30 --device auto
+python3 main.py --device auto --model ../models/sign_transformer.pt --port /dev/cu.usbserial-XXXX
+```
+
+맥에서 만든 PyTorch 체크포인트는 실행 장치에 종속되지 않습니다. Jetson에서는 같은 파일을 `--device cuda`로 불러오면 됩니다.
+
 웹 시연 화면으로 결과를 보내려면 Jetson에 서버 주소와 Render의 `JETSON_API_TOKEN`을 설정합니다. 추론은 Jetson에서만 실행되며 서버는 라벨과 신뢰도만 웹소켓으로 브라우저에 전달합니다.
 
 ```bash

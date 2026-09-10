@@ -13,7 +13,12 @@ from model import SignTransformer
 class SignPredictor:
     def __init__(self, checkpoint_path: Path, device: str = "auto") -> None:
         if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+            if torch.cuda.is_available():
+                device = "cuda"
+            elif torch.backends.mps.is_available():
+                device = "mps"
+            else:
+                device = "cpu"
         self.device = torch.device(device)
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
         self.labels: list[str] = checkpoint["labels"]
