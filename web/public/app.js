@@ -7,6 +7,8 @@ const participantId = document.querySelector("#participantId");
 const message = document.querySelector("#message");
 const countdown = document.querySelector("#countdown");
 const sampleCount = document.querySelector("#sampleCount");
+const uploadCount = document.querySelector("#uploadCount");
+const uploadStatus = document.querySelector("#uploadStatus");
 const badge = document.querySelector("#deviceBadge");
 const frameRate = document.querySelector("#frameRate");
 const reviewActions = document.querySelector("#reviewActions");
@@ -25,6 +27,9 @@ let recording = false;
 let capture = [];
 let pendingSample = null;
 let saved = 0;
+let uploading = false;
+const UPLOAD_QUEUE_KEY = "aihandglove_upload_queue_v1";
+let uploadQueue = loadUploadQueue();
 let framesThisSecond = 0;
 const graph = [];
 const sessionId = `web_${new Date().toISOString().replace(/[:.]/g, "-")}`;
@@ -134,32 +139,65 @@ form.addEventListener("submit", async event => {
   message.textContent = `${pendingSample.label} 데이터 40프레임을 수집했습니다. 저장하거나 버리기를 선택하세요.`;
 });
 
-saveButton.addEventListener("click", async () => {
+saveButton.addEventListener("click", () => {
   if (!pendingSample) return;
-  saveButton.disabled = true;
-  discardButton.disabled = true;
-  countdown.textContent = "저장 중";
+  const queuedLabel = pendingSample.label;
+  uploadQueue.push(pendingSample);
+  persistUploadQueue();
+  clearPendingSample();
+  countdown.textContent = "준비";
+  message.textContent = `${queuedLabel} 데이터를 전송 대기열에 넣었습니다. 바로 다음 동작을 기록할 수 있습니다.`;
+  updateUploadStatus();
+  flushUploadQueue();
+});
+
+function loadUploadQueue() {
+  try {
+    const value = JSON.parse(localStorage.getItem(UPLOAD_QUEUE_KEY) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistUploadQueue() {
+  localStorage.setItem(UPLOAD_QUEUE_KEY, JSON.stringify(uploadQueue));
+}
+
+function updateUploadStatus(failed = false) {
+  uploadCount.textContent = uploadQueue.length;
+  uploadStatus.textContent = failed ? "연결 복구 후 재시도" : uploadQueue.length ? "백그라운드 전송 중" : "전송 완료";
+}
+
+async function flushUploadQueue() {
+  if (uploading || uploadQueue.length === 0) return;
+  uploading = true;
+  let retryDelay = 100;
 
   try {
-    const response = await fetch("/api/samples", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(pendingSample)
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error);
-    saved += 1;
-    sampleCount.textContent = saved;
-    countdown.textContent = "완료";
-    message.textContent = `${pendingSample.label} 샘플을 DB에 저장했습니다. 잠시 쉬고 다시 반복하세요.`;
-    clearPendingSample();
+    while (uploadQueue.length > 0) {
+      const response = await fetch("/api/samples", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(uploadQueue[0])
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "서버 전송 실패");
+      uploadQueue.shift();
+      persistUploadQueue();
+      saved += 1;
+      sampleCount.textContent = saved;
+      updateUploadStatus();
+    }
   } catch (error) {
-    countdown.textContent = "실패";
-    message.textContent = `저장하지 못했습니다: ${error.message}`;
-    saveButton.disabled = false;
-    discardButton.disabled = false;
+    updateUploadStatus(true);
+    if (!recording && !pendingSample) message.textContent = `전송이 지연되고 있습니다: ${error.message}`;
+    retryDelay = 5000;
+  } finally {
+    uploading = false;
+    if (uploadQueue.length > 0) setTimeout(flushUploadQueue, retryDelay);
   }
-});
+}
 
 discardButton.addEventListener("click", () => {
   if (!pendingSample) return;
@@ -242,6 +280,8 @@ setInterval(() => { frameRate.textContent = `${framesThisSecond} Hz`; framesThis
 document.querySelector("#supportNotice").textContent = "serial" in navigator ? "Chrome · Edge · 115200 baud" : "Chrome 또는 Edge가 필요합니다.";
 loadLabels().catch(() => { message.textContent = "서버에서 수어 목록을 가져오지 못했습니다."; });
 initializeLegends();
+updateUploadStatus();
+flushUploadQueue();
 
 if (document.modelContext?.registerTool) {
   document.modelContext.registerTool({
