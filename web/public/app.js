@@ -9,6 +9,8 @@ const countdown = document.querySelector("#countdown");
 const sampleCount = document.querySelector("#sampleCount");
 const uploadCount = document.querySelector("#uploadCount");
 const uploadStatus = document.querySelector("#uploadStatus");
+const totalSampleCount = document.querySelector("#totalSampleCount");
+const labelCounts = document.querySelector("#labelCounts");
 const badge = document.querySelector("#deviceBadge");
 const frameRate = document.querySelector("#frameRate");
 const reviewActions = document.querySelector("#reviewActions");
@@ -38,6 +40,20 @@ async function loadLabels() {
   const response = await fetch("/api/labels");
   const { labels } = await response.json();
   labelSelect.innerHTML = labels.map(label => `<option value="${label}">${label}</option>`).join("");
+}
+
+async function loadSampleCounts() {
+  const response = await fetch("/api/sample-counts", { cache: "no-store" });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "수집량 조회 실패");
+  const maximum = Math.max(...Object.values(result.counts), 1);
+  totalSampleCount.textContent = result.total;
+  labelCounts.innerHTML = Object.entries(result.counts).map(([label, count]) => `
+    <div class="label-count">
+      <div><strong>${label === "none" ? "일반 동작 (none)" : label}</strong><b>${count}개</b></div>
+      <span><i style="width:${count / maximum * 100}%"></i></span>
+    </div>
+  `).join("");
 }
 
 function parseSensorLine(line) {
@@ -188,6 +204,7 @@ async function flushUploadQueue() {
       saved += 1;
       sampleCount.textContent = saved;
       updateUploadStatus();
+      loadSampleCounts().catch(() => {});
     }
   } catch (error) {
     updateUploadStatus(true);
@@ -279,6 +296,7 @@ function initializeLegends() {
 setInterval(() => { frameRate.textContent = `${framesThisSecond} Hz`; framesThisSecond = 0; }, 1000);
 document.querySelector("#supportNotice").textContent = "serial" in navigator ? "Chrome · Edge · 115200 baud" : "Chrome 또는 Edge가 필요합니다.";
 loadLabels().catch(() => { message.textContent = "서버에서 수어 목록을 가져오지 못했습니다."; });
+loadSampleCounts().catch(error => { labelCounts.innerHTML = `<p>${error.message}</p>`; });
 initializeLegends();
 updateUploadStatus();
 flushUploadQueue();

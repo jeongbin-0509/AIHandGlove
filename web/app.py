@@ -38,6 +38,27 @@ def get_labels():
     return jsonify(labels=LABELS)
 
 
+@app.get("/api/sample-counts")
+def sample_counts():
+    if supabase is None:
+        return jsonify(error="Supabase 환경 변수가 설정되지 않았습니다."), 503
+    try:
+        counts = {}
+        for label in LABELS:
+            result = (
+                supabase.table("glove_samples")
+                .select("id", count="exact")
+                .eq("label", label)
+                .limit(1)
+                .execute()
+            )
+            counts[label] = result.count or 0
+        return jsonify(counts=counts, total=sum(counts.values()))
+    except Exception:
+        app.logger.exception("Supabase sample count query failed")
+        return jsonify(error="수어별 수집량을 가져오지 못했습니다."), 500
+
+
 @app.get("/api/predictions/latest")
 def latest_prediction():
     return jsonify(prediction=recent_predictions[-1] if recent_predictions else None)
