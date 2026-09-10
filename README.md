@@ -85,6 +85,8 @@ python3 main.py --model ../models/sign_transformer.pt --port /dev/ttyUSB0
 
 시연 화면은 `https://ai-hand-glove-collector.onrender.com/demo`에서 열 수 있습니다. 새 결과가 도착하면 글자와 신뢰도가 갱신되고, 브라우저의 한국어 음성 합성 기능으로 자동 재생됩니다.
 
+수어 맞추기 게임은 `https://ai-hand-glove-collector.onrender.com/game`에서 실행합니다. DB에 20개 이상 모인 수어만 문제로 출제되며 Jetson 또는 Mac의 실시간 예측 결과가 70% 이상으로 정답과 일치하면 점수와 콤보가 올라갑니다.
+
 ## 웹 데이터 수집기
 
 `web/`은 Flask 기반 Web Serial 수집 사이트이며 Render에서 실행할 수 있습니다. Supabase SQL Editor에서 `supabase/schema.sql`을 먼저 실행하고, Render 환경 변수 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JETSON_API_TOKEN`을 설정합니다. 웹에서 장갑을 사용할 때 ESP32의 출력 모드는 `OUTPUT_JSON`이어야 합니다.

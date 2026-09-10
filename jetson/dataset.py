@@ -62,6 +62,26 @@ def split_by_session(
     return train, validation
 
 
+def split_random_stratified(
+    paths: Sequence[Path], validation_ratio: float, seed: int
+) -> tuple[list[Path], list[Path]]:
+    """Stratified clip split for a quick same-user demonstration model."""
+    if not 0.0 < validation_ratio < 1.0:
+        raise ValueError("validation_ratio must be between 0 and 1")
+    rng = np.random.default_rng(seed)
+    train: list[Path] = []
+    validation: list[Path] = []
+    for label in sorted({path.parent.name for path in paths}):
+        label_paths = [path for path in paths if path.parent.name == label]
+        rng.shuffle(label_paths)
+        n_val = max(1, int(round(len(label_paths) * validation_ratio)))
+        validation.extend(label_paths[:n_val])
+        train.extend(label_paths[n_val:])
+    if not train or not validation:
+        raise ValueError("not enough samples to create train/validation splits")
+    return train, validation
+
+
 class SignDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
     def __init__(
         self,

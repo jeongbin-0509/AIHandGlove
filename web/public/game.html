@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AIHandGlove 실시간 수어 맞추기 게임" />
+    <title>AIHandGlove 수어 맞추기</title>
+    <link rel="stylesheet" href="/game.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <a class="brand" href="/">AG</a>
+        <div><strong>수어 맞추기</strong><span>AIHandGlove</span></div>
+        <span id="connection" class="connection">서버 연결 중</span>
+      </header>
+
+      <section class="game-board">
+        <div class="scorebar">
+          <div><span>점수</span><strong id="score">0</strong></div>
+          <div><span>콤보</span><strong id="combo">0</strong></div>
+          <div><span>남은 시간</span><strong><b id="time">45</b>초</strong></div>
+        </div>
+
+        <div class="challenge">
+          <p>이 수어를 표현해 보세요</p>
+          <h1 id="prompt">준비됐나요?</h1>
+          <div id="feedback" class="feedback">장갑을 착용하고 시작을 눌러주세요.</div>
+          <div class="confidence"><span id="confidenceBar"></span></div>
+          <p id="recognition">Jetson 인식 대기 중</p>
+        </div>
+
+        <button id="startButton" class="start" type="button">게임 시작</button>
+      </section>
+
+      <section class="howto">
+        <strong>게임 방법</strong>
+        <span>45초 동안 화면에 나온 수어를 표현하세요. Jetson의 예측 신뢰도가 70% 이상이고 정답과 일치하면 점수와 콤보가 올라갑니다.</span>
+      </section>
+    </main>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="/game.js"></script>
+  </body>
+</html>

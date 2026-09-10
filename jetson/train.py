@@ -17,6 +17,7 @@ from dataset import (
     compute_normalization,
     discover_samples,
     load_label_map,
+    split_random_stratified,
     split_by_session,
 )
 from model import SignTransformer
@@ -31,6 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=3e-4)
     parser.add_argument("--validation-ratio", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--split", choices=("session", "random"), default="session")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda", "mps"), default="auto")
     return parser.parse_args()
 
@@ -72,7 +74,11 @@ def main() -> None:
 
     paths = discover_samples(args.data_dir)
     label_map = load_label_map(args.data_dir)
-    train_paths, val_paths = split_by_session(paths, args.validation_ratio, args.seed)
+    if args.split == "random":
+        train_paths, val_paths = split_random_stratified(paths, args.validation_ratio, args.seed)
+    else:
+        train_paths, val_paths = split_by_session(paths, args.validation_ratio, args.seed)
+    print(f"split={args.split} train={len(train_paths)} validation={len(val_paths)}")
     mean, std = compute_normalization(train_paths)
     train_set = SignDataset(train_paths, label_map, mean, std, augment=True)
     val_set = SignDataset(val_paths, label_map, mean, std)

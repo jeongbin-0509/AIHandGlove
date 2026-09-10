@@ -166,6 +166,11 @@ def demo():
     return send_from_directory(app.static_folder, "demo.html")
 
 
+@app.get("/game")
+def game():
+    return send_from_directory(app.static_folder, "game.html")
+
+
 @app.get("/<path:path>")
 def static_or_index(path: str):
     requested = BASE_DIR / "public" / path
