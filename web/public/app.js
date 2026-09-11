@@ -22,6 +22,11 @@ const chartGroups = [
   { canvas: document.querySelector("#gyroCanvas"), legend: document.querySelector("#gyroLegend"), indexes: [8, 9, 10], labels: ["X", "Y", "Z"], colors: ["#5bd7ff", "#ffad66", "#ff6b6b"], digits: 1 }
 ];
 
+document.querySelector("#logoutButton").addEventListener("click", async () => {
+  await fetch("/api/admin/logout", { method: "POST" });
+  location.href = "/";
+});
+
 let port;
 let reader;
 let connected = false;

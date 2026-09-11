@@ -19,6 +19,7 @@ button, input, select { font: inherit; }
 .brand-mark { display:grid; place-items:center; width:42px; height:42px; color:#06110e; background:var(--mint); border-radius:12px; font-weight:900; }
 .badge { margin-left:auto; padding:8px 13px; border:1px solid var(--line); border-radius:99px; color:var(--muted); font-size:.85rem; }
 .badge.connected { border-color:#348665; color:var(--mint); background:#10271f; }
+.logout { padding:8px 13px; color:var(--muted); border:1px solid var(--line); border-radius:99px; background:transparent; cursor:pointer; }
 .workspace { display:grid; grid-template-columns: 1fr 1.3fr; gap:24px; padding-top:42px; }
 .intro { padding:26px 8% 28px 0; }
 .eyebrow { color:var(--mint); font-size:.78rem; font-weight:800; letter-spacing:.14em; }

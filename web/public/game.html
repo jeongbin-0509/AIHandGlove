@@ -12,6 +12,7 @@
       <header>
         <a class="brand" href="/">AG</a>
         <div><strong>수어 맞추기</strong><span>AIHandGlove</span></div>
+        <button id="adminButton" class="admin-button" type="button">관리자</button>
         <span id="connection" class="connection">서버 연결 중</span>
       </header>
 
@@ -30,7 +31,10 @@
           <p id="recognition">Jetson 인식 대기 중</p>
         </div>
 
-        <button id="startButton" class="start" type="button">게임 시작</button>
+        <div class="actions">
+          <button id="gloveButton" class="glove" type="button">USB 장갑 연결</button>
+          <button id="startButton" class="start" type="button" disabled>게임 시작</button>
+        </div>
       </section>
 
       <section class="howto">
@@ -38,6 +42,19 @@
         <span>45초 동안 화면에 나온 수어를 표현하세요. Jetson의 예측 신뢰도가 70% 이상이고 정답과 일치하면 점수와 콤보가 올라갑니다.</span>
       </section>
     </main>
+
+    <dialog id="adminDialog" class="admin-dialog">
+      <form id="adminForm">
+        <button id="closeAdmin" class="dialog-close" type="button" aria-label="닫기">×</button>
+        <span class="lock-icon">AG</span>
+        <p>ADMIN ACCESS</p>
+        <h2>데이터 수집실 입장</h2>
+        <label for="adminCode">관리자 코드</label>
+        <input id="adminCode" type="password" autocomplete="current-password" required />
+        <button class="login-button" type="submit">권한 확인</button>
+        <span id="adminMessage" class="admin-message"></span>
+      </form>
+    </dialog>
 
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script src="/game.js"></script>

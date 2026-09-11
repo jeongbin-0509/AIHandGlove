@@ -7,6 +7,8 @@ header { height:78px; display:flex; align-items:center; gap:12px; border-bottom:
 header div { display:flex; flex-direction:column; line-height:1.25; } header div span { color:var(--muted); font-size:.8rem; }
 .connection { margin-left:auto; padding:8px 13px; color:var(--muted); border:1px solid var(--line); border-radius:99px; font-size:.82rem; }
 .connection.online { color:var(--mint); border-color:#3e836a; background:#10271f; }
+.admin-button { margin-left:auto; padding:8px 13px; color:var(--muted); border:1px solid var(--line); border-radius:99px; background:#0b1714; cursor:pointer; }
+.admin-button + .connection { margin-left:0; }
 .game-board { position:relative; min-height:620px; margin-top:28px; padding:24px; display:flex; flex-direction:column; align-items:center; border:1px solid var(--line); border-radius:28px; background:linear-gradient(145deg,#10231dcc,#08120fee); box-shadow:0 30px 80px #0008; overflow:hidden; }
 .scorebar { width:100%; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 .scorebar > div { padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); border-radius:14px; background:#07110e; }
@@ -20,8 +22,24 @@ h1 { margin:0; font-size:clamp(3.5rem,10vw,7.5rem); line-height:1; letter-spacin
 .confidence { width:min(400px,90%); height:7px; margin-top:18px; overflow:hidden; border-radius:99px; background:#ffffff12; }
 .confidence span { display:block; width:0; height:100%; border-radius:99px; background:var(--mint); transition:width .25s; }
 #recognition { color:var(--muted); font-size:.875rem; }
-.start { min-width:210px; padding:15px 24px; border:0; border-radius:14px; color:#06100d; background:var(--mint); font:800 1rem/1 Inter,Pretendard,system-ui,sans-serif; cursor:pointer; }
-.start:hover { filter:brightness(1.08); }
+.actions { display:flex; gap:10px; }
+.actions button { min-width:190px; padding:15px 24px; border-radius:14px; font:800 1rem/1 Inter,Pretendard,system-ui,sans-serif; cursor:pointer; }
+.start { border:0; color:#06100d; background:var(--mint); }
+.glove { color:var(--mint); border:1px solid #3e836a; background:#10271f; }
+.actions button:hover { filter:brightness(1.08); }
+.actions button:disabled { opacity:.45; cursor:not-allowed; }
 .howto { margin-top:14px; padding:18px 22px; display:flex; gap:18px; border:1px solid var(--line); border-radius:16px; color:var(--muted); background:#0b1714; }
 .howto strong { flex:none; color:var(--text); }
-@media(max-width:650px) { .game-board{min-height:570px;padding:14px}.scorebar{grid-template-columns:1fr}.scorebar>div{padding:8px 13px}.howto{flex-direction:column;gap:4px}.connection{font-size:.7rem} }
+.admin-dialog { width:min(430px,calc(100% - 32px)); padding:0; color:var(--text); border:1px solid var(--line); border-radius:24px; background:#0c1915; box-shadow:0 32px 100px #000c; }
+.admin-dialog::backdrop { background:#020806cc; backdrop-filter:blur(7px); }
+.admin-dialog form { position:relative; display:flex; flex-direction:column; padding:34px; }
+.dialog-close { position:absolute; top:14px; right:16px; color:var(--muted); border:0; background:transparent; font-size:1.7rem; cursor:pointer; }
+.lock-icon { display:grid; place-items:center; width:48px; height:48px; color:#06100d; background:var(--mint); border-radius:14px; font-weight:900; }
+.admin-dialog p { margin:22px 0 5px; color:var(--mint); font-size:.72rem; font-weight:800; letter-spacing:.15em; }
+.admin-dialog h2 { margin:0 0 24px; font-size:1.7rem; }
+.admin-dialog label { color:var(--muted); font-size:.82rem; font-weight:700; }
+.admin-dialog input { width:100%; margin:8px 0 14px; padding:13px; color:var(--text); border:1px solid var(--line); border-radius:11px; outline:none; background:#06100d; font:inherit; }
+.admin-dialog input:focus { border-color:var(--mint); }
+.login-button { padding:14px; color:#06100d; border:0; border-radius:11px; background:var(--mint); font-weight:900; cursor:pointer; }
+.admin-message { min-height:1.4em; margin-top:12px; color:var(--red); font-size:.84rem; text-align:center; }
+@media(max-width:650px) { .game-board{min-height:570px;padding:14px}.scorebar{grid-template-columns:1fr}.scorebar>div{padding:8px 13px}.actions{width:100%;flex-direction:column}.actions button{width:100%}.howto{flex-direction:column;gap:4px}.connection{font-size:.7rem} }

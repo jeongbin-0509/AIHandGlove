@@ -7,6 +7,13 @@ const comboText = document.querySelector("#combo");
 const timeText = document.querySelector("#time");
 const startButton = document.querySelector("#startButton");
 const connection = document.querySelector("#connection");
+const gloveButton = document.querySelector("#gloveButton");
+const adminButton = document.querySelector("#adminButton");
+const adminDialog = document.querySelector("#adminDialog");
+const adminForm = document.querySelector("#adminForm");
+const adminCode = document.querySelector("#adminCode");
+const adminMessage = document.querySelector("#adminMessage");
+const closeAdmin = document.querySelector("#closeAdmin");
 
 let labels = [];
 let target = "";
@@ -16,6 +23,127 @@ let seconds = 45;
 let playing = false;
 let accepting = false;
 let timer;
+let serialPort;
+let serialReader;
+let gloveConnected = false;
+let sensorWindow = [];
+let framesSinceInference = 0;
+let inferencePending = false;
+
+adminButton.addEventListener("click", async () => {
+  const response = await fetch("/api/admin/status", { cache: "no-store" });
+  const result = await response.json();
+  if (result.authenticated) {
+    location.href = "/collect";
+    return;
+  }
+  adminMessage.textContent = "";
+  adminDialog.showModal();
+  adminCode.focus();
+});
+
+closeAdmin.addEventListener("click", () => adminDialog.close());
+adminDialog.addEventListener("click", event => {
+  if (event.target === adminDialog) adminDialog.close();
+});
+
+adminForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  adminMessage.textContent = "확인 중…";
+  const response = await fetch("/api/admin/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code: adminCode.value })
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    adminMessage.textContent = result.error || "권한 확인에 실패했습니다.";
+    adminCode.select();
+    return;
+  }
+  location.href = result.redirect;
+});
+
+function parseSensorLine(line) {
+  try {
+    if (line.startsWith("{")) {
+      const value = JSON.parse(line);
+      const frame = [...value.flex, ...value.acc, ...value.gyro].map(Number);
+      return frame.length === 11 && frame.every(Number.isFinite) ? frame : null;
+    }
+    const entries = Object.fromEntries(line.split(/\s+/).map(item => item.split(":")));
+    const keys = ["thumb", "index", "middle", "ring", "little", "accX", "accY", "accZ", "gyroX", "gyroY", "gyroZ"];
+    const frame = keys.map(key => Number(entries[key]));
+    return frame.every(Number.isFinite) ? frame : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readGlove() {
+  const decoder = new TextDecoderStream();
+  serialPort.readable.pipeTo(decoder.writable).catch(() => {});
+  serialReader = decoder.readable.getReader();
+  let buffer = "";
+  try {
+    while (gloveConnected) {
+      const { value, done } = await serialReader.read();
+      if (done) break;
+      buffer += value;
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+      for (const line of lines) {
+        const frame = parseSensorLine(line.trim());
+        if (!frame) continue;
+        sensorWindow.push(frame);
+        if (sensorWindow.length > 40) sensorWindow.shift();
+        framesSinceInference += 1;
+        if (sensorWindow.length === 40 && framesSinceInference >= 4 && !inferencePending) {
+          framesSinceInference = 0;
+          sendForInference([...sensorWindow]);
+        }
+      }
+    }
+  } finally {
+    serialReader?.releaseLock();
+  }
+}
+
+async function sendForInference(sequence) {
+  inferencePending = true;
+  try {
+    const response = await fetch("/api/local-inference", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sequence })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+  } catch (error) {
+    recognition.textContent = error.message || "로컬 추론 연결 실패";
+  } finally {
+    inferencePending = false;
+  }
+}
+
+gloveButton.addEventListener("click", async () => {
+  if (!("serial" in navigator)) {
+    feedback.textContent = "Chrome 또는 Edge에서 로컬 주소를 열어주세요.";
+    return;
+  }
+  try {
+    serialPort = await navigator.serial.requestPort();
+    await serialPort.open({ baudRate: 115200 });
+    gloveConnected = true;
+    gloveButton.textContent = "장갑 연결됨";
+    gloveButton.disabled = true;
+    startButton.disabled = false;
+    feedback.textContent = "장갑 연결 완료 · 게임을 시작하세요.";
+    readGlove();
+  } catch (error) {
+    feedback.textContent = `장갑 연결 실패: ${error.message}`;
+  }
+});
 
 function chooseNext() {
   const choices = labels.filter(label => label !== target);
@@ -97,7 +225,7 @@ fetch("/api/sample-counts", { cache: "no-store" })
 
 const socket = io({ transports: ["websocket", "polling"] });
 socket.on("connect", () => {
-  connection.textContent = "게임 서버 연결됨";
+  connection.textContent = location.hostname === "127.0.0.1" || location.hostname === "localhost" ? "로컬 AI 준비" : "게임 서버 연결됨";
   connection.classList.add("online");
 });
 socket.on("disconnect", () => {

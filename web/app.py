@@ -2,12 +2,14 @@ import os
 import re
 import hashlib
 import secrets
+import sys
+from threading import Lock
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, redirect, request, send_from_directory, session, url_for
 from flask_socketio import SocketIO
 from supabase import Client, create_client
 
@@ -16,12 +18,20 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
 app = Flask(__name__, static_folder="public", static_url_path="")
+app.secret_key = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("RENDER") == "true",
+)
 socketio = SocketIO(app, cors_allowed_origins=[], async_mode="threading")
 
 LABELS = ["안녕하세요", "감사합니다", "사랑해요", "미안합니다", "괜찮아요", "none"]
 PARTICIPANT_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{2,40}$")
 recent_predictions: deque[dict] = deque(maxlen=20)
 JETSON_TOKEN_SHA256 = "3aec97c7a25acaceefb3f9b5d7a6c1f75259a32cecc187a37cba77aaf45f619b"
+local_predictor = None
+local_predictor_lock = Lock()
 
 supabase: Client | None = None
 if os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
@@ -40,9 +50,52 @@ def jetson_is_authorized() -> bool:
     return plain_match or hash_match
 
 
+def admin_is_authorized() -> bool:
+    return session.get("admin") is True
+
+
+def get_local_predictor():
+    global local_predictor
+    if local_predictor is not None:
+        return local_predictor
+    model_path = BASE_DIR.parent / "models" / "sign_transformer.pt"
+    if not model_path.exists():
+        raise RuntimeError("로컬 학습 모델을 찾지 못했습니다.")
+    jetson_dir = BASE_DIR.parent / "jetson"
+    if str(jetson_dir) not in sys.path:
+        sys.path.insert(0, str(jetson_dir))
+    from inference import SignPredictor
+    local_predictor = SignPredictor(model_path, "auto")
+    return local_predictor
+
+
 @app.get("/api/health")
 def health():
     return jsonify(ok=True, databaseConfigured=supabase is not None)
+
+
+@app.get("/api/admin/status")
+def admin_status():
+    return jsonify(authenticated=admin_is_authorized())
+
+
+@app.post("/api/admin/login")
+def admin_login():
+    expected_code = os.environ.get("ADMIN_CODE", "")
+    supplied_code = str((request.get_json(silent=True) or {}).get("code", ""))
+    if not expected_code:
+        return jsonify(error="서버에 ADMIN_CODE가 설정되지 않았습니다."), 503
+    if not secrets.compare_digest(supplied_code, expected_code):
+        return jsonify(error="관리자 코드가 올바르지 않습니다."), 401
+    session.clear()
+    session["admin"] = True
+    return jsonify(ok=True, redirect=url_for("collect"))
+
+
+@app.post("/api/admin/logout")
+def admin_logout():
+    session.clear()
+    return jsonify(ok=True)
 
 
 @app.get("/api/labels")
@@ -97,8 +150,39 @@ def publish_prediction():
     return jsonify(ok=True), 202
 
 
+@app.post("/api/local-inference")
+def local_inference():
+    if request.remote_addr not in {"127.0.0.1", "::1"}:
+        return jsonify(error="로컬 컴퓨터에서만 사용할 수 있습니다."), 403
+    body = request.get_json(silent=True) or {}
+    sequence = body.get("sequence")
+    if not (
+        isinstance(sequence, list)
+        and len(sequence) == 40
+        and all(isinstance(frame, list) and len(frame) == 11 for frame in sequence)
+    ):
+        return jsonify(error="40×11 센서 데이터가 필요합니다."), 400
+    try:
+        import numpy as np
+        with local_predictor_lock:
+            label, confidence, _ = get_local_predictor().predict(np.asarray(sequence, dtype=np.float32))
+        prediction = {
+            "label": label,
+            "confidence": confidence,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        recent_predictions.append(prediction)
+        socketio.emit("prediction", prediction)
+        return jsonify(prediction=prediction)
+    except Exception:
+        app.logger.exception("Local inference failed")
+        return jsonify(error="로컬 AI 추론에 실패했습니다."), 500
+
+
 @app.post("/api/samples")
 def save_sample():
+    if not admin_is_authorized():
+        return jsonify(error="관리자 로그인이 필요합니다."), 401
     if supabase is None:
         return jsonify(error="Supabase 환경 변수가 설정되지 않았습니다."), 503
 
@@ -166,7 +250,19 @@ def training_data():
 
 @app.get("/")
 def index():
+    return send_from_directory(app.static_folder, "game.html")
+
+
+@app.get("/collect")
+def collect():
+    if not admin_is_authorized():
+        return redirect(url_for("index"))
     return send_from_directory(app.static_folder, "index.html")
+
+
+@app.get("/index.html")
+def protected_index_file():
+    return redirect(url_for("collect"))
 
 
 @app.get("/demo")
@@ -184,7 +280,7 @@ def static_or_index(path: str):
     requested = BASE_DIR / "public" / path
     if requested.is_file():
         return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, "index.html")
+    return send_from_directory(app.static_folder, "game.html")
 
 
 if __name__ == "__main__":
