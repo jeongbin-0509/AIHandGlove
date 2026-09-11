@@ -47,8 +47,16 @@ class SensorSerialReader:
         if not line or line.startswith("#"):
             return None
         try:
-            payload = json.loads(line)
-            values = payload["flex"] + payload["acc"] + payload["gyro"]
+            if line.startswith("{"):
+                payload = json.loads(line)
+                values = payload["flex"] + payload["acc"] + payload["gyro"]
+            else:
+                entries = dict(item.split(":", 1) for item in line.split())
+                keys = (
+                    "thumb", "index", "middle", "ring", "little",
+                    "accX", "accY", "accZ", "gyroX", "gyroY", "gyroZ",
+                )
+                values = [float(entries[key]) for key in keys]
             vector = np.asarray(values, dtype=np.float32)
         except (json.JSONDecodeError, KeyError, TypeError, ValueError):
             return None
