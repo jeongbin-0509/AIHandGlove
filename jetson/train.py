@@ -73,12 +73,22 @@ def main() -> None:
     print(f"training device: {device}")
 
     paths = discover_samples(args.data_dir)
+    real_paths = []
+    synthetic_paths = []
+    for path in paths:
+        with np.load(path, allow_pickle=False) as sample:
+            is_synthetic = bool(sample["synthetic"].item()) if "synthetic" in sample else False
+        (synthetic_paths if is_synthetic else real_paths).append(path)
     label_map = load_label_map(args.data_dir)
     if args.split == "random":
-        train_paths, val_paths = split_random_stratified(paths, args.validation_ratio, args.seed)
+        train_paths, val_paths = split_random_stratified(real_paths, args.validation_ratio, args.seed)
     else:
-        train_paths, val_paths = split_by_session(paths, args.validation_ratio, args.seed)
-    print(f"split={args.split} train={len(train_paths)} validation={len(val_paths)}")
+        train_paths, val_paths = split_by_session(real_paths, args.validation_ratio, args.seed)
+    train_paths.extend(synthetic_paths)
+    print(
+        f"split={args.split} train={len(train_paths)} validation={len(val_paths)} "
+        f"synthetic_train_only={len(synthetic_paths)}"
+    )
     mean, std = compute_normalization(train_paths)
     train_set = SignDataset(train_paths, label_map, mean, std, augment=True)
     val_set = SignDataset(val_paths, label_map, mean, std)
